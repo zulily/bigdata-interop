@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.apache.http.HttpHost;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -280,6 +281,10 @@ public abstract class GoogleHadoopFileSystemBase
   // glob matches in a single API call before running the core globbing logic in-memory rather
   // than sequentially and recursively performing API calls.
   public static final String GCS_ENABLE_FLAT_GLOB_KEY = "fs.gs.glob.flatlist.enable";
+
+  public static final String GCS_PROXY_HOST_KEY = "fs.gs.proxy.host";
+
+  public static final String GCS_PROXY_PORT_KEY = "fs.gs.proxy.port";
 
   // Default value for fs.gs.glob.flatlist.enable.
   public static final boolean GCS_ENABLE_FLAT_GLOB_DEFAULT = true;
@@ -1549,6 +1554,14 @@ public abstract class GoogleHadoopFileSystemBase
       optionsBuilder
           .getCloudStorageOptionsBuilder()
           .setAppName(GHFS_ID);
+
+      String proxyHost = config.get(GCS_PROXY_HOST_KEY);
+      if(!Strings.isNullOrEmpty(proxyHost)) {
+        Integer proxyPort = config.getInt(GCS_PROXY_PORT_KEY, 80);
+        optionsBuilder.
+            getCloudStorageOptionsBuilder().
+            setProxyHost(new HttpHost(proxyHost, proxyPort));
+      }
 
       gcsfs = new GoogleCloudStorageFileSystem(credential, optionsBuilder.build());
     }

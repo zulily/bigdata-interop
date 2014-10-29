@@ -18,6 +18,7 @@ package com.google.cloud.hadoop.gcsio;
 import com.google.cloud.hadoop.util.AsyncWriteChannelOptions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.http.HttpHost;
 
 /**
  * Configuration options for the GoogleCloudStorage class.
@@ -52,6 +53,8 @@ public class GoogleCloudStorageOptions {
     // maximum of 1000 requests per batch; it should not generally be necessary to modify this value
     // manually, except possibly for testing purposes.
     private long maxRequestsPerBatch = MAX_REQUESTS_PER_BATCH_DEFAULT;
+
+    private HttpHost proxyHost;
 
     private AsyncWriteChannelOptions.Builder writeChannelOptionsBuilder =
         new AsyncWriteChannelOptions.Builder();
@@ -88,6 +91,11 @@ public class GoogleCloudStorageOptions {
       return this;
     }
 
+    public Builder setProxyHost(HttpHost proxyHost) {
+      this.proxyHost = proxyHost;
+      return this;
+    }
+
     public AsyncWriteChannelOptions.Builder getWriteChannelOptionsBuilder() {
       return writeChannelOptionsBuilder;
     }
@@ -99,7 +107,8 @@ public class GoogleCloudStorageOptions {
           appName,
           maxListItemsPerCall,
           maxRequestsPerBatch,
-          writeChannelOptionsBuilder.build());
+          writeChannelOptionsBuilder.build(),
+          proxyHost);
     }
   }
 
@@ -113,16 +122,19 @@ public class GoogleCloudStorageOptions {
   private final AsyncWriteChannelOptions writeChannelOptions;
   private final long maxListItemsPerCall;
   private final long maxRequestsPerBatch;
+  private final HttpHost proxyHost;
+
 
   public GoogleCloudStorageOptions(boolean autoRepairImplicitDirectoriesEnabled,
       String projectId, String appName, long maxListItemsPerCall, long maxRequestsPerBatch,
-      AsyncWriteChannelOptions writeChannelOptions) {
+      AsyncWriteChannelOptions writeChannelOptions, HttpHost proxyHost) {
     this.autoRepairImplicitDirectoriesEnabled = autoRepairImplicitDirectoriesEnabled;
     this.projectId = projectId;
     this.appName = appName;
     this.writeChannelOptions = writeChannelOptions;
     this.maxListItemsPerCall = maxListItemsPerCall;
     this.maxRequestsPerBatch = maxRequestsPerBatch;
+    this.proxyHost = proxyHost;
   }
 
   public boolean isAutoRepairImplicitDirectoriesEnabled() {
@@ -147,6 +159,10 @@ public class GoogleCloudStorageOptions {
 
   public long getMaxRequestsPerBatch() {
     return maxRequestsPerBatch;
+  }
+
+  public HttpHost getProxyHost() {
+    return proxyHost;
   }
 
   public void throwIfNotValid() {

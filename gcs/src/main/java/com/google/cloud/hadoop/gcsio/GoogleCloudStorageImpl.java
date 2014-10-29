@@ -17,13 +17,13 @@
 package com.google.cloud.hadoop.gcsio;
 
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.GoogleUtils;
 import com.google.api.client.googleapis.batch.json.JsonBatchCallback;
 import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.BackOff;
@@ -48,10 +48,12 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.http.HttpHost;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -85,9 +87,6 @@ public class GoogleCloudStorageImpl
 
   // Duration of wait (in milliseconds) per retry for a bucket to be empty.
   public static final int BUCKET_EMPTY_WAIT_TIME_MS = 500;
-
-  // HTTP transport used for interacting with Google APIs.
-  private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
   // JSON factory used for formatting GCS JSON API payloads.
   private static final JsonFactory JSON_FACTORY = new JacksonFactory();
@@ -207,9 +206,21 @@ public class GoogleCloudStorageImpl
 
     this.httpRequestInitializer = new RetryHttpInitializer(credential, options.getAppName());
 
+    // HTTP transport used for interacting with Google APIs.
+    ApacheHttpTransport.Builder httpTransportBuilder = new ApacheHttpTransport.Builder();
+    try {
+      httpTransportBuilder.trustCertificates(GoogleUtils.getCertificateTrustStore());
+    } catch (GeneralSecurityException e) {
+      log.error(e.getMessage(), e);
+    }
+    HttpHost proxyHost = options.getProxyHost();
+    if (proxyHost != null) {
+      httpTransportBuilder.setProxy(proxyHost);
+    }
+
     // Create GCS instance.
     gcs = new Storage.Builder(
-        HTTP_TRANSPORT, JSON_FACTORY, httpRequestInitializer)
+      httpTransportBuilder.build(), JSON_FACTORY, httpRequestInitializer)
         .setApplicationName(options.getAppName())
         .build();
   }
